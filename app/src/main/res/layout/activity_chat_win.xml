@@ -73,6 +73,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginLeft="@dimen/_20sdp"
                 android:layout_gravity="center"
+                android:textColor="@color/black"
                 android:background="@null"
                 android:fontFamily="@font/poppins_regular"
                 android:hint="Type The Messages..."
