@@ -13,3 +13,19 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Gradle
+.gradle/
+build/
+*/build/
+
+# Android Studio & IntelliJ
+.idea/
+*.iml
+
+# Local configuration
+local.properties
+
+# Logs and system
+*.log
+.DS_Store
+
