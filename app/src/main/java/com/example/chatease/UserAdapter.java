@@ -10,6 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.squareup.picasso.Picasso;
 
 import java.net.CookieHandler;
@@ -17,7 +18,7 @@ import java.util.ArrayList;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
-public class UserAdapter extends RecyclerView.Adapter<UserAdapter.viewHolder> {
+public class  UserAdapter extends RecyclerView.Adapter<UserAdapter.viewHolder> {
     Context mainActivity;
     ArrayList<Users> usersArrayList;
     public UserAdapter(MainActivity mainActivity, ArrayList<Users> usersArrayList) {
@@ -34,7 +35,9 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.viewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull viewHolder holder, int position) {
+
         Users users = usersArrayList.get(position);
+
         holder.username.setText(users.username);
         holder.userstatus.setText(users.status);
         Picasso.get().load(users.profilepic).into(holder.userimg);

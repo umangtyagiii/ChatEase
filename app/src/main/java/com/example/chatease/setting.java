@@ -1,6 +1,5 @@
 package com.example.chatease;
 
-import android.app.ComponentCaller;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
@@ -9,7 +8,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.QuickContactBadge;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -35,6 +33,7 @@ import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 
 public class setting extends AppCompatActivity {
+
     ImageView setprofile;
     EditText setname, setstatus;
     Button donebut;
@@ -42,7 +41,9 @@ public class setting extends AppCompatActivity {
     FirebaseDatabase database;
     FirebaseStorage storage;
     Uri setImageUri;
-    String email,password;
+    String email, password;
+    String existingProfileUri = "";
+
     ProgressDialog progressDialog;
 
     @Override
@@ -50,15 +51,23 @@ public class setting extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_setting);
+
         auth = FirebaseAuth.getInstance();
         database = FirebaseDatabase.getInstance();
         storage = FirebaseStorage.getInstance();
+
         setprofile = findViewById(R.id.settingprofile);
         setname = findViewById(R.id.settingname);
         setstatus = findViewById(R.id.settingstatus);
         donebut = findViewById(R.id.donebutt);
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Saving...");
+
         DatabaseReference reference = database.getReference().child("user").child(auth.getUid());
         StorageReference storageReference = storage.getReference().child("upload").child(auth.getUid());
+
+        // Load existing user data
         reference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -69,6 +78,9 @@ public class setting extends AppCompatActivity {
                     String profile = getSafeString(snapshot.child("profilepic").getValue());
                     String status = getSafeString(snapshot.child("status").getValue());
 
+                    // Set global variable with current profile image URI
+                    existingProfileUri = profile;
+
                     setname.setText(name);
                     setstatus.setText(status);
 
@@ -77,82 +89,58 @@ public class setting extends AppCompatActivity {
                     }
                 }
             }
+
+
             private String getSafeString(Object obj) {
                 return obj != null ? obj.toString() : "";
             }
 
-
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-
-            }
-        });
-        setprofile.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent();
-                intent.setType("image/*");
-                intent.setAction(Intent.ACTION_GET_CONTENT);
-                startActivityForResult(Intent.createChooser(intent, "Select Picture"), 10);
+                Toast.makeText(setting.this, "Failed to load data", Toast.LENGTH_SHORT).show();
             }
         });
 
-        donebut.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String name = setname.getText().toString();
-                String Status = setstatus.getText().toString();
-                if(setImageUri!=null){
-                    storageReference.putFile(setImageUri).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                            storageReference.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                                @Override
-                                public void onSuccess(Uri uri) {
-                                    String finalimageUri = uri.toString();
-                                    Users users = new Users(auth.getUid(), name, email, password, finalimageUri, Status);
-                                    reference.setValue(users).addOnCompleteListener(new OnCompleteListener<Void>() {
-                                        @Override
-                                        public void onComplete(@NonNull Task<Void> task) {
-                                            if(task.isSuccessful()){
-                                                Toast.makeText(setting.this, "Data is saved!", Toast.LENGTH_SHORT).show();
-                                                Intent intent = new Intent(setting.this,MainActivity.class);
-                                                startActivity(intent);
-                                                finish();
-                                            }else {
-                                                progressDialog.dismiss();
-                                                Toast.makeText(setting.this, "Some thing went romg", Toast.LENGTH_SHORT).show();
-                                            }
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-                else {
-                    storageReference.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                        @Override
-                        public void onSuccess(Uri uri) {
+        // Select new profile image
+        setprofile.setOnClickListener(view -> {
+            Intent intent = new Intent();
+            intent.setType("image/*");
+            intent.setAction(Intent.ACTION_GET_CONTENT);
+            startActivityForResult(Intent.createChooser(intent, "Select Picture"), 10);
+        });
+
+        // Save updated data
+        donebut.setOnClickListener(v -> {
+            String name = setname.getText().toString().trim();
+            String status = setstatus.getText().toString().trim();
+
+            if (name.isEmpty() || status.isEmpty()) {
+                Toast.makeText(setting.this, "Name and status cannot be empty", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            progressDialog.show();
+
+            if (setImageUri != null) {
+                // User picked a new image
+                storageReference.putFile(setImageUri).addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        storageReference.getDownloadUrl().addOnSuccessListener(uri -> {
                             String finalImageUri = uri.toString();
-                            Users users = new Users(auth.getUid(), name,email,password,finalImageUri,Status);
-                            reference.setValue(users).addOnCompleteListener(new OnCompleteListener<Void>() {
-                                @Override
-                                public void onComplete(@NonNull Task<Void> task) {
-                                    if (task.isSuccessful()){
-                                        progressDialog.dismiss();
-                                        Toast.makeText(setting.this, "Data Is save ", Toast.LENGTH_SHORT).show();
-                                        Intent intent = new Intent(setting.this,MainActivity.class);
-                                        startActivity(intent);
-                                        finish();
-                                    }else {
-                                        progressDialog.dismiss();
-                                        Toast.makeText(setting.this, "Some thing went romg", Toast.LENGTH_SHORT).show();
-                                    }
-                                }
-                            });
-                        }
-                    });
+                            saveUserData(reference, name, status, finalImageUri);
+                        });
+                    } else {
+                        progressDialog.dismiss();
+                        Toast.makeText(setting.this, "Image upload failed", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } else {
+                // Use existing profile image from Realtime Database
+                if (!existingProfileUri.isEmpty()) {
+                    saveUserData(reference, name, status, existingProfileUri);
+                } else {
+                    progressDialog.dismiss();
+                    Toast.makeText(setting.this, "No profile image found", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -165,14 +153,26 @@ public class setting extends AppCompatActivity {
         });
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 10) {
-            if (data != null) {
-                setImageUri = data.getData();
-                setprofile.setImageURI(setImageUri);
+    private void saveUserData(DatabaseReference reference, String name, String status, String profileUri) {
+        Users users = new Users(auth.getUid(), name, email, password, profileUri, status);
+        reference.setValue(users).addOnCompleteListener(task -> {
+            progressDialog.dismiss();
+            if (task.isSuccessful()) {
+                Toast.makeText(setting.this, "Profile updated", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(setting.this, MainActivity.class));
+                finish();
+            } else {
+                Toast.makeText(setting.this, "Failed to save data", Toast.LENGTH_SHORT).show();
             }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 10 && resultCode == RESULT_OK && data != null) {
+            setImageUri = data.getData();
+            setprofile.setImageURI(setImageUri);
         }
     }
 }

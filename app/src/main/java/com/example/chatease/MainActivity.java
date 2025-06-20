@@ -89,19 +89,24 @@ public class MainActivity extends AppCompatActivity {
         reference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot dataSnapshot: snapshot.getChildren())
-                {
+                usersArrayList.clear(); // Clear old data
+                String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+                for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
                     Users users = dataSnapshot.getValue(Users.class);
-                    usersArrayList.add(users);
+                    if (users != null && !users.getUserId().equals(currentUserId)) {
+                        usersArrayList.add(users); // Add only if not the current user
+                    }
                 }
-                adapter.notifyDataSetChanged();
+                adapter.notifyDataSetChanged(); // Notify adapter with updated list
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-
+                Toast.makeText(MainActivity.this, "Failed to load users", Toast.LENGTH_SHORT).show();
             }
         });
+
         setbut.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
