@@ -39,11 +39,6 @@ ChatEase is a real-time Android chat application designed for seamless one-on-on
 
 ---
 
-## 📷 Screenshots
-
-*(Add screenshots here showing login, chat interface, dashboard, etc.)*
-
----
 
 ## 🧑‍💻 Getting Started
 
